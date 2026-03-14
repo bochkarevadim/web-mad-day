@@ -2,7 +2,7 @@
 
 Публичная веб-форма регистрации на игру MAD DAY (без Telegram).
 
-## Локальный запуск
+## Локальный запуск (для теста)
 
 ```bash
 python3 -m venv .venv
@@ -13,30 +13,38 @@ python3 web_form.py
 
 Форма будет доступна на `http://localhost:8080`.
 
-## Переменные окружения
+## Публикация на GitHub Pages + Apps Script
 
-Обязательные:
-- `GOOGLE_SHEETS_SPREADSHEET` или `GOOGLE_SHEETS_SPREADSHEET_ID`
-- `GOOGLE_CREDENTIALS_JSON` (полный JSON сервисного аккаунта)
+GitHub Pages отдаёт только статические страницы. Поэтому серверную часть мы выносим в Google Apps Script.
 
-Рекомендуемые:
-- `REGISTRATION_TIMEZONE`
-- `PAYMENT_LINK`
-- `FACTION_LIMITS`
-- `TARIFFS`
-- `TARIFF_BUTTONS`
+### 1) Создай Apps Script
 
-## Деплой на Render
+1. Открой [https://script.google.com](https://script.google.com)
+2. Создай новый проект
+3. Удали весь код и вставь содержимое файла `apps_script.gs`
+4. Вверху в `CONFIG` задай:
+   - `SPREADSHEET_NAME` (название таблицы)
+   - `TIMEZONE` (например `Europe/Moscow`)
+   - при желании `FACTION_LIMITS`, `TARIFFS`
+5. Нажми **Deploy → New deployment**
+6. Тип: **Web app**
+7. Execute as: **Me**
+8. Who has access: **Anyone**
+9. Скопируй URL веб‑приложения
 
-Render читает `render.yaml` автоматически.
+### 2) Вставь URL в GitHub Pages
 
-1. Создай **Web Service** и подключи этот репозиторий.
-2. Задай переменные окружения (см. выше).
-3. После деплоя получишь публичную ссылку вида `https://...onrender.com`.
+1. Открой `docs/index.html`
+2. Найди строку:
+   ```js
+   const APPS_SCRIPT_URL = "PASTE_APPS_SCRIPT_URL_HERE";
+   ```
+3. Вставь URL из Apps Script
+4. Запушь изменения
 
-## GitHub Pages (страница с iframe)
+### 3) Включи GitHub Pages
 
-1. Открой `docs/index.html` и замени `RENDER_FORM_URL` на ссылку Render.
-2. В GitHub включи Pages для ветки `main`, папка `/docs`.
+В GitHub: Settings → Pages → Branch: `main`, Folder: `/docs`.
 
-После этого получишь публичную страницу, где форма встроена через iframe.
+После этого форма будет доступна по ссылке:
+`https://bochkarevadim.github.io/web-mad-day/`

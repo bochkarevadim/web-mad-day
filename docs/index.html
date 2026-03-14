@@ -3,68 +3,447 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>MAD DAY — регистрация</title>
+    <title>Регистрация MAD DAY</title>
     <style>
+      @import url("https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;600;700&family=Oswald:wght@400;600&display=swap");
+
       :root {
-        color-scheme: light;
+        --bg: #0b0b0b;
+        --panel: #141414;
+        --panel-strong: #1a1a1a;
+        --accent: #f39c12;
+        --accent-dark: #c7770a;
+        --text: #f5f5f5;
+        --muted: #bdbdbd;
       }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-        background: radial-gradient(circle at top, #1f1f1f, #0b0b0b);
-        color: #f5f5f5;
+        font-family: "Fira Sans", sans-serif;
+        background: radial-gradient(circle at top, #242424, var(--bg));
+        color: var(--text);
       }
-      .header {
-        padding: 24px 16px 8px;
+
+      header {
         text-align: center;
+        padding: 28px 16px 12px;
       }
-      .header h1 {
+
+      header h1 {
+        font-family: "Oswald", sans-serif;
+        font-size: 28px;
+        letter-spacing: 1px;
         margin: 0 0 8px;
-        font-size: 24px;
-        letter-spacing: 0.4px;
       }
-      .header p {
+
+      header p {
         margin: 0;
-        color: #cfcfcf;
+        color: var(--muted);
       }
-      .frame-wrap {
+
+      .container {
         max-width: 1100px;
         margin: 0 auto;
-        padding: 16px;
+        padding: 0 16px 60px;
       }
-      iframe {
-        width: 100%;
-        height: 1200px;
-        border: none;
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        gap: 20px;
+      }
+
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--panel);
         border-radius: 16px;
-        background: #111;
+        padding: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
       }
-      .fallback {
-        text-align: center;
-        padding: 12px 16px 32px;
+
+      .card h2 {
+        margin-top: 0;
+        font-family: "Oswald", sans-serif;
+        letter-spacing: 0.6px;
       }
-      .fallback a {
-        color: #f39c12;
+
+      label {
+        display: block;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-top: 14px;
+      }
+
+      input, select {
+        width: 100%;
+        margin-top: 8px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid #2d2d2d;
+        background: var(--panel-strong);
+        color: var(--text);
+        font-size: 16px;
+      }
+
+      button {
+        margin-top: 20px;
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: #1a1a1a;
         font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .status {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .pill-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+
+      .pill-nav a {
         text-decoration: none;
+        background: rgba(243, 156, 18, 0.16);
+        color: var(--accent);
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      section {
+        margin-top: 20px;
+        padding: 16px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      section h3 {
+        margin-top: 0;
+        font-family: "Oswald", sans-serif;
+      }
+
+      .section-text {
+        white-space: pre-wrap;
+        line-height: 1.6;
+        font-size: 14px;
+        color: #e2e2e2;
+      }
+
+      .image-grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .image-grid figure {
+        margin: 0;
+        text-align: center;
+      }
+
+      .image-grid img {
+        max-width: 100%;
+        border-radius: 12px;
+        background: #000;
+        cursor: zoom-in;
+      }
+
+      .image-grid figcaption {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #cfcfcf;
+      }
+
+      .action-btn {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #1a1a1a;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 9999;
+      }
+
+      .modal.open {
+        display: flex;
+      }
+
+      .modal-content {
+        max-width: min(92vw, 1100px);
+        width: 100%;
+        background: #111;
+        border-radius: 14px;
+        padding: 16px;
+        position: relative;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+      }
+
+      .modal-content img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        background: #000;
+        border-radius: 10px;
+      }
+
+      .modal-caption {
+        margin-top: 10px;
+        font-size: 14px;
+        color: #cfcfcf;
+        text-align: center;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        background: var(--accent);
+        color: #1a1a1a;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-weight: 700;
+        cursor: pointer;
       }
     </style>
   </head>
   <body>
-    <header class="header">
+    <header>
       <h1>Регистрация MAD DAY</h1>
-      <p>Если форма не отображается, открой её по ссылке ниже.</p>
+      <p>Заполни форму — данные сразу попадут в Google Таблицу.</p>
     </header>
-    <main class="frame-wrap">
-      <iframe
-        src="RENDER_FORM_URL"
-        title="Регистрация без Telegram"
-        loading="lazy"
-      ></iframe>
-    </main>
-    <div class="fallback">
-      <a href="RENDER_FORM_URL" target="_blank" rel="noopener">Открыть форму в новом окне</a>
+
+    <div class="container">
+      <div class="grid">
+        <div class="card">
+          <h2>Регистрация бойца</h2>
+          <form id="reg-form">
+            <label for="callsign">Позывной</label>
+            <input id="callsign" name="callsign" placeholder="Например: Стелс" required>
+
+            <label for="full_name">Фамилия и имя</label>
+            <input id="full_name" name="full_name" placeholder="Иванов Иван" required>
+
+            <label for="phone">Телефон</label>
+            <input id="phone" name="phone" placeholder="+7 999 123-45-67" required>
+
+            <label for="faction">Фракция</label>
+            <select id="faction" name="faction" required>
+              <option value="">Выбери фракцию</option>
+              <option value="🔵 Корпус Стали">🔵 Корпус Стали</option>
+              <option value="🔴 Новый Штат">🔴 Новый Штат</option>
+            </select>
+
+            <label for="tariff">Тариф</label>
+            <select id="tariff" name="tariff" required>
+              <option value="">Выбери тариф</option>
+              <option value="Рейдер">Рейдер</option>
+              <option value="Нефтешлам">Нефтешлам</option>
+              <option value="Мародер">Мародер</option>
+              <option value="Бензиновый барон">Бензиновый барон</option>
+            </select>
+
+            <button id="submit-btn" type="submit">Зарегистрироваться</button>
+            <div id="status" class="status">Форма готова к отправке.</div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="pill-nav">
+            <a href="#section-map">Карта</a>
+            <a href="#section-schedule">Расписание</a>
+            <a href="#section-lore">История</a>
+            <a href="#section-info">Инфо</a>
+            <a href="#section-briefing">Брифинги</a>
+          </div>
+
+          <section id="section-map">
+            <h3>Карта полигона</h3>
+            <div id="text-map" class="section-text">Загрузка...</div>
+            <div class="image-grid">
+              <figure>
+                <img class="zoomable" src="content/scenario1.jpg" alt="Карта — Эпизод 1" onerror="this.closest('figure').style.display='none'">
+                <figcaption>Карта — Эпизод 1</figcaption>
+              </figure>
+              <figure>
+                <img class="zoomable" src="content/scenario2.jpg" alt="Карта — Эпизод 2" onerror="this.closest('figure').style.display='none'">
+                <figcaption>Карта — Эпизод 2</figcaption>
+              </figure>
+              <figure>
+                <img class="zoomable" src="content/scenario3.jpg" alt="Карта — Эпизод 3" onerror="this.closest('figure').style.display='none'">
+                <figcaption>Карта — Эпизод 3</figcaption>
+              </figure>
+            </div>
+          </section>
+
+          <section id="section-schedule">
+            <h3>Расписание</h3>
+            <div id="text-schedule" class="section-text">Загрузка...</div>
+          </section>
+
+          <section id="section-lore">
+            <h3>История мира MAD DAY</h3>
+            <div id="text-lore" class="section-text">Загрузка...</div>
+          </section>
+
+          <section id="section-info">
+            <h3>Информация об игре</h3>
+            <div id="text-info" class="section-text">Загрузка...</div>
+          </section>
+
+          <section id="section-briefing">
+            <h3>Брифинг фракций</h3>
+            <div id="text-briefing-steel" class="section-text">Загрузка...</div>
+            <div style="height: 12px"></div>
+            <div id="text-briefing-state" class="section-text">Загрузка...</div>
+          </section>
+        </div>
+      </div>
     </div>
+
+    <div id="image-modal" class="modal">
+      <div class="modal-content">
+        <button id="image-modal-close" class="modal-close" type="button">X</button>
+        <img id="image-modal-img" alt="">
+        <div id="image-modal-caption" class="modal-caption"></div>
+      </div>
+    </div>
+
+    <script>
+      const APPS_SCRIPT_URL = "PASTE_APPS_SCRIPT_URL_HERE";
+
+      const statusEl = document.getElementById('status');
+      const submitBtn = document.getElementById('submit-btn');
+      const form = document.getElementById('reg-form');
+
+      function setStatus(text, isError) {
+        statusEl.textContent = text;
+        statusEl.style.color = isError ? '#ffb3b3' : '#bdbdbd';
+      }
+
+      if (APPS_SCRIPT_URL.includes('PASTE_APPS_SCRIPT_URL_HERE')) {
+        submitBtn.disabled = true;
+        setStatus('Админ не указал ссылку Apps Script. Форма временно отключена.', true);
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (submitBtn.disabled) {
+          return;
+        }
+        const formData = new FormData(form);
+        formData.append('source', 'WEB');
+
+        submitBtn.disabled = true;
+        setStatus('Отправляем данные...', false);
+
+        try {
+          await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: new URLSearchParams(formData),
+          });
+          setStatus('Заявка отправлена. Если что-то не так — напиши организатору.', false);
+          form.reset();
+        } catch (error) {
+          setStatus('Не удалось отправить. Попробуй ещё раз.', true);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      const contentMap = {
+        'text-map': 'content/map.txt',
+        'text-schedule': 'content/schedule.txt',
+        'text-lore': 'content/lore.txt',
+        'text-info': 'content/info.txt',
+        'text-briefing-steel': 'content/briefing_steel.txt',
+        'text-briefing-state': 'content/briefing_state.txt',
+      };
+
+      Object.entries(contentMap).forEach(([elementId, path]) => {
+        fetch(path)
+          .then((res) => res.ok ? res.text() : '')
+          .then((text) => {
+            const el = document.getElementById(elementId);
+            if (el) {
+              el.textContent = text || 'Информация пока не добавлена.';
+            }
+          })
+          .catch(() => {
+            const el = document.getElementById(elementId);
+            if (el) {
+              el.textContent = 'Информация пока не добавлена.';
+            }
+          });
+      });
+
+      const modal = document.getElementById('image-modal');
+      const modalImg = document.getElementById('image-modal-img');
+      const modalCaption = document.getElementById('image-modal-caption');
+      const closeBtn = document.getElementById('image-modal-close');
+
+      document.querySelectorAll('.zoomable').forEach((img) => {
+        img.addEventListener('click', () => {
+          modalImg.src = img.src;
+          modalCaption.textContent = img.alt || '';
+          modal.classList.add('open');
+        });
+      });
+
+      closeBtn.addEventListener('click', () => {
+        modal.classList.remove('open');
+      });
+
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          modal.classList.remove('open');
+        }
+      });
+    </script>
   </body>
 </html>

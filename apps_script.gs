@@ -1,6 +1,7 @@
 const CONFIG = {
   SPREADSHEET_NAME: "MAD DAY REGISTRATION",
   SPREADSHEET_ID: "",
+  SPREADSHEET_URL: "",
   SHEET_NAME: "",
   TIMEZONE: "Europe/Moscow",
   FACTION_LIMITS: {
@@ -82,11 +83,14 @@ function getSheet() {
   let spreadsheet;
   if (CONFIG.SPREADSHEET_ID) {
     spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  } else if (CONFIG.SPREADSHEET_URL) {
+    spreadsheet = SpreadsheetApp.openByUrl(CONFIG.SPREADSHEET_URL);
   } else {
-    spreadsheet = SpreadsheetApp.openByName(CONFIG.SPREADSHEET_NAME);
-  }
-  if (!spreadsheet) {
-    throw new Error("Spreadsheet not found");
+    const files = DriveApp.getFilesByName(CONFIG.SPREADSHEET_NAME);
+    if (!files.hasNext()) {
+      throw new Error("Spreadsheet not found by name");
+    }
+    spreadsheet = SpreadsheetApp.openById(files.next().getId());
   }
   return CONFIG.SHEET_NAME ? spreadsheet.getSheetByName(CONFIG.SHEET_NAME) : spreadsheet.getSheets()[0];
 }

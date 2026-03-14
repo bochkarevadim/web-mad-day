@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Регистрация MAD DAY</title>
+    <title>ВЕРБОВОЧНЫЙ ТЕРМИНАЛ — MAD DAY 5.0</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;600;700&family=Oswald:wght@400;600&display=swap");
 
@@ -237,6 +237,47 @@
         text-align: center;
       }
 
+
+      header h1 span {
+        display: block;
+      }
+      header h1 span:last-child {
+        font-size: 22px;
+        color: var(--accent);
+      }
+      .tariff-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .tariff-card {
+        text-align: left;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 12px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        color: var(--text);
+      }
+      .tariff-card strong {
+        display: block;
+        color: var(--accent);
+        margin-bottom: 6px;
+      }
+      .tariff-card span {
+        display: block;
+        font-size: 13px;
+        color: #e0e0e0;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+      .command-btn {
+        display: inline-block;
+        margin-top: 14px;
+        width: 100%;
+        text-align: center;
+      }
       .modal-close {
         position: absolute;
         top: 10px;
@@ -253,8 +294,7 @@
   </head>
   <body>
     <header>
-      <h1>Регистрация MAD DAY</h1>
-      <p>Заполни форму — данные сразу попадут в Google Таблицу.</p>
+      <h1><span>ВЕРБОВОЧНЫЙ ТЕРМИНАЛ ОПЕРАЦИИ</span><span>MAD DAY 5.0 - ЧЕРНЫЙ ГОРИЗОНТ</span></h1>
     </header>
 
     <div class="container">
@@ -288,6 +328,29 @@
             </select>
 
             <button id="submit-btn" type="submit">Зарегистрироваться</button>
+            <div class="tariff-grid" aria-label="Описание тарифов">
+              <button type="button" class="tariff-card" data-tariff="Рейдер">
+                <strong>🏜️ РЕЙДЕР — 1000₽</strong>
+                <span>Свое снаряжение: Твоё верное железо, проверенное песками.
+В комплекте: входной билет, заправка воздухом, доступ к инфраструктуре Хольмгарда.</span>
+              </button>
+              <button type="button" class="tariff-card" data-tariff="Нефтешлам">
+                <strong>🛢️ НЕФТЕШЛАМ — 2200₽</strong>
+                <span>Базовый комплект выживания (маркер, маска, форма).
+Боезапас: 500 шаров — залей их краской!</span>
+              </button>
+              <button type="button" class="tariff-card" data-tariff="Мародер">
+                <strong>💀 МАРОДЕР — 2500₽</strong>
+                <span>Улучшенная экипировка (термальная маска с двойным стеклом).
+Боезапас: 500 шаров. Статус: опытный боец.</span>
+              </button>
+              <button type="button" class="tariff-card" data-tariff="Бензиновый барон">
+                <strong>👑 БЕНЗИНОВЫЙ БАРОН — 3000₽</strong>
+                <span>Топовая экипировка + полная бронезащита.
+Боезапас: 1000 шаров. Статус: хозяин вышки.</span>
+              </button>
+            </div>
+            <a class="action-btn command-btn" href="https://t.me/bochkarrrev" target="_blank" rel="noopener">СВЯЗЬ С КОМАНДОВАНИЕМ</a>
             <div id="status" class="status">Форма готова к отправке.</div>
           </form>
         </div>
@@ -336,10 +399,15 @@
           </section>
 
           <section id="section-briefing">
-            <h3>Брифинг фракций</h3>
-            <div id="text-briefing-steel" class="section-text">Загрузка...</div>
-            <div style="height: 12px"></div>
-            <div id="text-briefing-state" class="section-text">Загрузка...</div>
+            <h3>Брифинг</h3>
+            <div class="section-text">1 ЭПИЗОД
+Ваша задача — Застолбить территорию. Чем больше земли под вашими ногами сейчас, тем проще будет работать технике в будущем. Захват и удержание секторов.
+
+2 ЭПИЗОД
+Оживить вышки. Без запчастей это просто груды ржавого металла. Принеси детали, запусти механизмы и удерживай их в рабочем состоянии.
+
+3 ЭПИЗОД
+Добыча и перекачка нефти. Собрать всё до последней капли. Кто заполнит свой резервуар больше — тот уедет из Хольмгарда победителем, оставив врага глотать пыль на обочине истории.</div>
           </section>
         </div>
       </div>
@@ -369,6 +437,16 @@
         submitBtn.disabled = true;
         setStatus('Админ не указал ссылку Apps Script. Форма временно отключена.', true);
       }
+
+
+      document.querySelectorAll('.tariff-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          const value = card.getAttribute('data-tariff');
+          if (value) {
+            document.getElementById('tariff').value = value;
+          }
+        });
+      });
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -401,8 +479,6 @@
         'text-schedule': 'content/schedule.txt',
         'text-lore': 'content/lore.txt',
         'text-info': 'content/info.txt',
-        'text-briefing-steel': 'content/briefing_steel.txt',
-        'text-briefing-state': 'content/briefing_state.txt',
       };
 
       Object.entries(contentMap).forEach(([elementId, path]) => {

@@ -1,8 +1,8 @@
 const CONFIG = {
   SPREADSHEET_NAME: "MAD DAY REGISTRATION",
-  SPREADSHEET_ID: "",
+  SPREADSHEET_ID: "1COcsQEROTsW8G9uymFL3sQ3xt_GlcYynJbfqnSSSEBs",
   SPREADSHEET_URL: "",
-  SHEET_NAME: "",
+  SHEET_NAME: "Лист1",
   TIMEZONE: "Europe/Moscow",
   FACTION_LIMITS: {
     "🔵 Корпус Стали": 60,

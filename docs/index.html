@@ -278,6 +278,34 @@
         width: 100%;
         text-align: center;
       }
+
+      .payment-block {
+        margin-top: 16px;
+        padding: 14px;
+        border-radius: 12px;
+        background: rgba(243, 156, 18, 0.12);
+        border: 1px solid rgba(243, 156, 18, 0.35);
+        color: #f6e7cc;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .payment-block.hidden {
+        display: none;
+      }
+      .payment-title {
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 6px;
+        letter-spacing: 0.4px;
+      }
+      .payment-link {
+        color: #ffd899;
+        word-break: break-all;
+      }
+      .payment-qr {
+        font-weight: 700;
+        margin-top: 8px;
+      }
       .modal-close {
         position: absolute;
         top: 10px;
@@ -353,6 +381,13 @@
             </div>
             <a class="action-btn command-btn" href="https://t.me/bochkarrrev" target="_blank" rel="noopener">СВЯЗЬ С КОМАНДОВАНИЕМ</a>
             <div id="status" class="status">Форма готова к отправке.</div>
+
+            <div id="payment-block" class="payment-block hidden" aria-live="polite">
+              <div class="payment-title">ℹ ОПЛАТА УЧАСТИЯ</div>
+              <div>После перевода сохрани чек и будь готов показать его организатору.</div>
+              <div class="payment-qr">QR</div>
+              <div>Ссылка: <a class="payment-link" href="https://www.sberbank.com/sms/pbpn?requisiteNumber=79217300917" target="_blank" rel="noopener">https://www.sberbank.com/sms/pbpn?requisiteNumber=79217300917</a></div>
+            </div>
           </form>
         </div>
 
@@ -431,6 +466,8 @@
       const submitBtn = document.getElementById('submit-btn');
       const form = document.getElementById('reg-form');
 
+      const paymentBlock = document.getElementById('payment-block');
+
       function setStatus(text, isError) {
         statusEl.textContent = text;
         statusEl.style.color = isError ? '#ffb3b3' : '#bdbdbd';
@@ -482,6 +519,10 @@
         isSubmitting = true;
         submitBtn.disabled = true;
         setStatus('Отправляем данные...', false);
+        if (paymentBlock) {
+          paymentBlock.classList.remove('hidden');
+          paymentBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
         if (submitTimer) {
           clearTimeout(submitTimer);

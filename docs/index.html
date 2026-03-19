@@ -279,9 +279,12 @@
         text-align: center;
       }
 
-      .payment-block {
+      .hidden {
+        display: none;
+      }
+      .result-block {
         margin-top: 16px;
-        padding: 14px;
+        padding: 16px;
         border-radius: 12px;
         background: rgba(243, 156, 18, 0.12);
         border: 1px solid rgba(243, 156, 18, 0.35);
@@ -289,22 +292,40 @@
         font-size: 14px;
         line-height: 1.6;
       }
-      .payment-block.hidden {
-        display: none;
-      }
-      .payment-title {
+      .result-title {
         font-weight: 700;
         color: var(--accent);
         margin-bottom: 6px;
         letter-spacing: 0.4px;
       }
+      .result-sub {
+        margin-top: 10px;
+        font-weight: 700;
+      }
+      .result-qr {
+        margin-top: 10px;
+        display: block;
+        max-width: 220px;
+        width: 100%;
+        border-radius: 12px;
+        background: #000;
+      }
+      .result-hint {
+        margin-top: 6px;
+        color: #ffd899;
+        font-weight: 600;
+      }
       .payment-link {
         color: #ffd899;
         word-break: break-all;
       }
-      .payment-qr {
-        font-weight: 700;
+      .paid-btn {
+        margin-top: 12px;
+        width: 100%;
+      }
+      .paid-status {
         margin-top: 8px;
+        color: #cfe4b4;
       }
       .modal-close {
         position: absolute;
@@ -382,12 +403,24 @@
             <a class="action-btn command-btn" href="https://t.me/bochkarrrev" target="_blank" rel="noopener">СВЯЗЬ С КОМАНДОВАНИЕМ</a>
             <div id="status" class="status">Форма готова к отправке.</div>
 
-            <div id="payment-block" class="payment-block hidden" aria-live="polite">
-              <div class="payment-title">ℹ ОПЛАТА УЧАСТИЯ</div>
+            <div id="result-block" class="result-block hidden" aria-live="polite">
+              <div class="result-title">Боец зарегистрирован</div>
+              <div class="result-sub">QR код бойца</div>
+              <img id="fighter-qr" class="result-qr" alt="QR код бойца">
+              <div class="result-hint">Сохрани QR</div>
+              <div class="result-sub">Оплата участия</div>
               <div>После перевода сохрани чек и будь готов показать его организатору.</div>
-              <div class="payment-qr">QR</div>
+              <div class="result-sub">QR для оплаты</div>
+              <img id="payment-qr" class="result-qr" alt="QR код оплаты">
               <div>Ссылка: <a class="payment-link" href="https://www.sberbank.com/sms/pbpn?requisiteNumber=79217300917" target="_blank" rel="noopener">https://www.sberbank.com/sms/pbpn?requisiteNumber=79217300917</a></div>
+              <button id="paid-btn" class="paid-btn" type="button">✅ Оплатил</button>
+              <div id="paid-status" class="paid-status"></div>
             </div>
+          </form>
+          <form id="paid-form" class="hidden" method="post" target="submit-frame">
+            <input type="hidden" name="action" value="mark_paid">
+            <input type="hidden" name="id" value="">
+            <input type="hidden" name="source" value="WEB">
           </form>
         </div>
 
@@ -466,11 +499,30 @@
       const submitBtn = document.getElementById('submit-btn');
       const form = document.getElementById('reg-form');
 
-      const paymentBlock = document.getElementById('payment-block');
+      const resultBlock = document.getElementById('result-block');
+      const fighterQr = document.getElementById('fighter-qr');
+      const paymentQr = document.getElementById('payment-qr');
+      const paidBtn = document.getElementById('paid-btn');
+      const paidStatus = document.getElementById('paid-status');
+      const paidForm = document.getElementById('paid-form');
+      const paidIdInput = paidForm ? paidForm.querySelector('input[name="id"]') : null;
+
+      const PAYMENT_URL = 'https://www.sberbank.com/sms/pbpn?requisiteNumber=79217300917';
 
       function setStatus(text, isError) {
         statusEl.textContent = text;
         statusEl.style.color = isError ? '#ffb3b3' : '#bdbdbd';
+      }
+
+      function buildQrUrl(text) {
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(text);
+      }
+
+      let lastSubmission = null;
+      let lastId = null;
+
+      if (paymentQr) {
+        paymentQr.src = buildQrUrl(PAYMENT_URL);
       }
 
       if (APPS_SCRIPT_URL.includes('PASTE_APPS_SCRIPT_URL_HERE')) {
@@ -497,32 +549,29 @@
       form.target = 'submit-frame';
       form.acceptCharset = 'UTF-8';
 
-      submitFrame.addEventListener('load', () => {
-        if (!isSubmitting) {
-          return;
-        }
-        isSubmitting = false;
-        if (submitTimer) {
-          clearTimeout(submitTimer);
-          submitTimer = null;
-        }
-        setStatus('Заявка отправлена. Если что-то не так — напиши организатору.', false);
-        form.reset();
-        submitBtn.disabled = false;
-      });
-
       form.addEventListener('submit', (event) => {
         if (submitBtn.disabled) {
           event.preventDefault();
           return;
         }
+        lastSubmission = {
+          callsign: form.callsign ? form.callsign.value.trim() : '',
+          fullName: form.full_name ? form.full_name.value.trim() : '',
+        };
+        lastId = null;
+        if (paidStatus) {
+          paidStatus.textContent = '';
+        }
+        if (paidBtn) {
+          paidBtn.disabled = true;
+        }
+        if (resultBlock) {
+          resultBlock.classList.add('hidden');
+        }
+
         isSubmitting = true;
         submitBtn.disabled = true;
         setStatus('Отправляем данные...', false);
-        if (paymentBlock) {
-          paymentBlock.classList.remove('hidden');
-          paymentBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
 
         if (submitTimer) {
           clearTimeout(submitTimer);
@@ -536,6 +585,80 @@
           submitBtn.disabled = false;
         }, 12000);
       });
+
+      function isAllowedOrigin(origin) {
+        return origin.indexOf('https://script.google.com') === 0
+          || origin.indexOf('https://script.googleusercontent.com') === 0;
+      }
+
+      window.addEventListener('message', (event) => {
+        if (!isAllowedOrigin(event.origin)) {
+          return;
+        }
+        const data = event.data;
+        if (!data || typeof data !== 'object') {
+          return;
+        }
+        if (submitTimer) {
+          clearTimeout(submitTimer);
+          submitTimer = null;
+        }
+
+        if (!data.ok) {
+          setStatus('Ошибка отправки. Проверь данные и попробуй ещё раз.', true);
+          submitBtn.disabled = false;
+          isSubmitting = false;
+          return;
+        }
+
+        if (data.action === 'register') {
+          lastId = data.id || '';
+          isSubmitting = false;
+          submitBtn.disabled = false;
+          setStatus('Боец зарегистрирован.', false);
+
+          if (fighterQr) {
+            const base = lastSubmission && lastSubmission.callsign
+              ? ('MAD DAY | ' + lastSubmission.callsign + ' | ID: ' + lastId)
+              : ('MAD DAY | ID: ' + lastId);
+            fighterQr.src = buildQrUrl(base);
+          }
+          if (resultBlock) {
+            resultBlock.classList.remove('hidden');
+            resultBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          if (paidBtn) {
+            paidBtn.disabled = false;
+          }
+          form.reset();
+          return;
+        }
+
+        if (data.action === 'mark_paid') {
+          if (paidStatus) {
+            paidStatus.textContent = 'Оплата отмечена. Спасибо!';
+          }
+        }
+      });
+
+      if (paidBtn && paidForm) {
+        paidBtn.addEventListener('click', () => {
+          if (!lastId) {
+            setStatus('Сначала зарегистрируйся, чтобы получить ID.', true);
+            return;
+          }
+          if (paidIdInput) {
+            paidIdInput.value = lastId;
+          }
+          if (paidStatus) {
+            paidStatus.textContent = 'Отмечаем оплату...';
+          }
+          paidForm.action = APPS_SCRIPT_URL;
+          paidForm.method = 'POST';
+          paidForm.target = 'submit-frame';
+          paidForm.submit();
+        });
+      }
 
       const contentMap = {
         'text-map': 'content/map.txt',

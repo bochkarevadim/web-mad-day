@@ -30,6 +30,26 @@ function doGet() {
 
 function doPost(e) {
   const data = e && e.parameter ? e.parameter : {};
+  const source = (data.source || "").trim();
+  const isWeb = source === "WEB";
+  const action = (data.action || "").trim();
+
+  const sheet = getSheet();
+  ensureHeaders(sheet);
+
+  if (action === "mark_paid") {
+    const id = String(data.id || "").trim();
+    if (!id) {
+      return respond({ ok: false, error: "missing_id" }, isWeb);
+    }
+    const paidAt = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy HH:mm");
+    const updated = markPaid(sheet, id, paidAt);
+    if (!updated) {
+      return respond({ ok: false, error: "id_not_found", id: id }, isWeb);
+    }
+    return respond({ ok: true, action: "mark_paid", id: id, paid_at: paidAt }, isWeb);
+  }
+
   const callsign = (data.callsign || "").trim();
   const fullName = (data.full_name || "").trim();
   const phone = (data.phone || "").trim();
@@ -37,27 +57,24 @@ function doPost(e) {
   const tariff = (data.tariff || "").trim();
 
   if (!callsign || callsign.length < 2 || callsign.length > 32) {
-    return jsonResponse({ ok: false, error: "invalid_callsign" });
+    return respond({ ok: false, error: "invalid_callsign" }, isWeb);
   }
   if (!fullName || fullName.split(/\s+/).length < 2) {
-    return jsonResponse({ ok: false, error: "invalid_full_name" });
+    return respond({ ok: false, error: "invalid_full_name" }, isWeb);
   }
   if (!phone) {
-    return jsonResponse({ ok: false, error: "invalid_phone" });
+    return respond({ ok: false, error: "invalid_phone" }, isWeb);
   }
   if (!CONFIG.FACTION_LIMITS[faction]) {
-    return jsonResponse({ ok: false, error: "invalid_faction" });
+    return respond({ ok: false, error: "invalid_faction" }, isWeb);
   }
   if (CONFIG.TARIFFS.indexOf(tariff) === -1) {
-    return jsonResponse({ ok: false, error: "invalid_tariff" });
+    return respond({ ok: false, error: "invalid_tariff" }, isWeb);
   }
-
-  const sheet = getSheet();
-  ensureHeaders(sheet);
 
   const counts = factionCounts(sheet);
   if ((counts[faction] || 0) >= CONFIG.FACTION_LIMITS[faction]) {
-    return jsonResponse({ ok: false, error: "faction_full" });
+    return respond({ ok: false, error: "faction_full" }, isWeb);
   }
 
   const id = nextPlayerId(sheet);
@@ -76,8 +93,9 @@ function doPost(e) {
     "",
   ]);
 
-  return jsonResponse({ ok: true, id: id });
+  return respond({ ok: true, action: "register", id: id }, isWeb);
 }
+
 
 function getSheet() {
   let spreadsheet;
@@ -126,6 +144,31 @@ function factionCounts(sheet) {
     }
   }
   return counts;
+}
+
+
+function respond(payload, isWeb) {
+  return isWeb ? htmlResponse(payload) : jsonResponse(payload);
+}
+
+function htmlResponse(payload) {
+  const safeJson = JSON.stringify(payload).replace(/</g, "\u003c");
+  const html = '<!doctype html><html><body><script>window.parent.postMessage(' + safeJson + ', "*");</script></body></html>';
+  return ContentService.createTextOutput(html)
+    .setMimeType(ContentService.MimeType.HTML);
+}
+
+function markPaid(sheet, id, paidAt) {
+  const values = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 0), 1).getValues();
+  for (let i = 0; i < values.length; i += 1) {
+    if (String(values[i][0] || "").trim() === String(id)) {
+      const row = i + 2;
+      sheet.getRange(row, 9).setValue("оплачено");
+      sheet.getRange(row, 10).setValue(paidAt);
+      return true;
+    }
+  }
+  return false;
 }
 
 function jsonResponse(payload) {

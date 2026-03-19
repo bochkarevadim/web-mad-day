@@ -321,12 +321,13 @@
             <label for="tariff">Тариф</label>
             <select id="tariff" name="tariff" required>
               <option value="">Выбери тариф</option>
-              <option value="Рейдер">Рейдер</option>
-              <option value="Нефтешлам">Нефтешлам</option>
-              <option value="Мародер">Мародер</option>
-              <option value="Бензиновый барон">Бензиновый барон</option>
+              <option value="Рейдер">Рейдер — 1000 ₽</option>
+              <option value="Нефтешлам">Нефтешлам — 2200 ₽</option>
+              <option value="Мародер">Мародер — 2500 ₽</option>
+              <option value="Бензиновый барон">Бензиновый барон — 3000 ₽</option>
             </select>
 
+            <input type="hidden" name="source" value="WEB">
             <button id="submit-btn" type="submit">Зарегистрироваться</button>
             <div class="tariff-grid" aria-label="Описание тарифов">
               <button type="button" class="tariff-card" data-tariff="Рейдер">
@@ -413,6 +414,8 @@
       </div>
     </div>
 
+    <iframe id="submit-frame" name="submit-frame" style="display:none"></iframe>
+
     <div id="image-modal" class="modal">
       <div class="modal-content">
         <button id="image-modal-close" class="modal-close" type="button">X</button>
@@ -448,30 +451,49 @@
         });
       });
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        if (submitBtn.disabled) {
+      const submitFrame = document.getElementById('submit-frame');
+      let isSubmitting = false;
+      let submitTimer = null;
+
+      form.action = APPS_SCRIPT_URL;
+      form.method = 'POST';
+      form.target = 'submit-frame';
+      form.acceptCharset = 'UTF-8';
+
+      submitFrame.addEventListener('load', () => {
+        if (!isSubmitting) {
           return;
         }
-        const formData = new FormData(form);
-        formData.append('source', 'WEB');
+        isSubmitting = false;
+        if (submitTimer) {
+          clearTimeout(submitTimer);
+          submitTimer = null;
+        }
+        setStatus('Заявка отправлена. Если что-то не так — напиши организатору.', false);
+        form.reset();
+        submitBtn.disabled = false;
+      });
 
+      form.addEventListener('submit', (event) => {
+        if (submitBtn.disabled) {
+          event.preventDefault();
+          return;
+        }
+        isSubmitting = true;
         submitBtn.disabled = true;
         setStatus('Отправляем данные...', false);
 
-        try {
-          await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: new URLSearchParams(formData),
-          });
-          setStatus('Заявка отправлена. Если что-то не так — напиши организатору.', false);
-          form.reset();
-        } catch (error) {
-          setStatus('Не удалось отправить. Попробуй ещё раз.', true);
-        } finally {
-          submitBtn.disabled = false;
+        if (submitTimer) {
+          clearTimeout(submitTimer);
         }
+        submitTimer = setTimeout(() => {
+          if (!isSubmitting) {
+            return;
+          }
+          isSubmitting = false;
+          setStatus('Не удалось отправить. Попробуй ещё раз.', true);
+          submitBtn.disabled = false;
+        }, 12000);
       });
 
       const contentMap = {

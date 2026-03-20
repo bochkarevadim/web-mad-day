@@ -517,7 +517,7 @@
       function errorMessage(errorCode) {
         const map = {
           invalid_callsign: 'Проверь позывной.',
-          invalid_full_name: 'Укажи фамилию и имя.',
+          invalid_full_name: 'Укажи имя.',
           invalid_phone: 'Укажи телефон.',
           invalid_faction: 'Выбери фракцию.',
           invalid_tariff: 'Выбери тариф.',
@@ -532,8 +532,79 @@
         return 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(text);
       }
 
+      function applyRegisterSuccess(id) {
+        lastId = id || '';
+        registerPending = false;
+        submitBtn.disabled = false;
+        setStatus('Боец зарегистрирован.', false);
+
+        if (fighterQr) {
+          const base = lastSubmission && lastSubmission.callsign
+            ? ('MAD DAY | ' + lastSubmission.callsign + ' | ID: ' + lastId)
+            : ('MAD DAY | ID: ' + lastId);
+          fighterQr.src = buildQrUrl(base);
+        }
+        if (resultBlock) {
+          resultBlock.classList.remove('hidden');
+          resultBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (paidBtn) {
+          paidBtn.disabled = false;
+        }
+        form.reset();
+      }
+
+      function applyPaidSuccess() {
+        paidPending = false;
+        if (paidBtn) {
+          paidBtn.disabled = false;
+        }
+        if (paidStatus) {
+          paidStatus.textContent = 'Оплата отмечена. Спасибо!';
+        }
+      }
+
+      function handleApiResponse(data) {
+        if (!data || typeof data !== 'object') {
+          throw new Error('invalid_response');
+        }
+
+        if (!data.ok) {
+          registerPending = false;
+          paidPending = false;
+          submitBtn.disabled = false;
+          if (paidBtn && !lastId) {
+            paidBtn.disabled = true;
+          }
+          if (paidBtn && lastId) {
+            paidBtn.disabled = false;
+          }
+          setStatus(errorMessage(data.error), true);
+          if (paidStatus && data.action === 'mark_paid') {
+            paidStatus.textContent = errorMessage(data.error);
+          }
+          return;
+        }
+
+        if (data.action === 'register') {
+          applyRegisterSuccess(data.id || '');
+          return;
+        }
+
+        if (data.action === 'mark_paid') {
+          applyPaidSuccess();
+        }
+      }
+
+      function isResponsePayload(data) {
+        return data && typeof data === 'object' && ('ok' in data || 'error' in data || 'action' in data);
+      }
+
       let lastSubmission = null;
       let lastId = null;
+      let requestCounter = 0;
+      let registerPending = false;
+      let paidPending = false;
 
       if (paymentQr) {
         paymentQr.src = buildQrUrl(PAYMENT_URL);
@@ -544,7 +615,6 @@
         setStatus('Админ не указал ссылку Apps Script. Форма временно отключена.', true);
       }
 
-
       document.querySelectorAll('.tariff-card').forEach((card) => {
         card.addEventListener('click', () => {
           const value = card.getAttribute('data-tariff');
@@ -554,25 +624,72 @@
         });
       });
 
-      const submitFrame = document.getElementById('submit-frame');
-      let isSubmitting = false;
-      let submitTimer = null;
+      function sendJsonp(params) {
+        return new Promise((resolve, reject) => {
+          requestCounter += 1;
+          const callbackName = '__madDayJsonp' + Date.now() + '_' + requestCounter;
+          const url = new URL(APPS_SCRIPT_URL);
+          Object.entries(params).forEach(([key, value]) => {
+            if (value === undefined || value === null) {
+              return;
+            }
+            url.searchParams.set(key, String(value));
+          });
+          url.searchParams.set('callback', callbackName);
+          url.searchParams.set('_ts', String(Date.now()));
 
-      form.action = APPS_SCRIPT_URL;
-      form.method = 'POST';
-      form.target = 'submit-frame';
-      form.acceptCharset = 'UTF-8';
+          const script = document.createElement('script');
+          let finished = false;
+          let timer = null;
 
-      form.addEventListener('submit', (event) => {
-        if (submitBtn.disabled) {
-          event.preventDefault();
-          return;
-        }
+          const cleanup = () => {
+            if (timer) {
+              clearTimeout(timer);
+              timer = null;
+            }
+            if (script.parentNode) {
+              script.parentNode.removeChild(script);
+            }
+            try {
+              delete window[callbackName];
+            } catch (error) {
+              window[callbackName] = undefined;
+            }
+          };
+
+          const finish = (handler, value) => {
+            if (finished) {
+              return;
+            }
+            finished = true;
+            cleanup();
+            handler(value);
+          };
+
+          window[callbackName] = (payload) => {
+            finish(resolve, payload);
+          };
+
+          script.onerror = () => {
+            finish(reject, new Error('network'));
+          };
+
+          timer = setTimeout(() => {
+            finish(reject, new Error('timeout'));
+          }, 15000);
+
+          script.src = url.toString();
+          document.body.appendChild(script);
+        });
+      }
+
+      async function submitRegistration() {
         lastSubmission = {
           callsign: form.callsign ? form.callsign.value.trim() : '',
           fullName: form.full_name ? form.full_name.value.trim() : '',
         };
         lastId = null;
+        registerPending = true;
         if (paidStatus) {
           paidStatus.textContent = '';
         }
@@ -583,100 +700,82 @@
           resultBlock.classList.add('hidden');
         }
 
-        isSubmitting = true;
         submitBtn.disabled = true;
         setStatus('Отправляем данные...', false);
 
-        if (submitTimer) {
-          clearTimeout(submitTimer);
-        }
-        submitTimer = setTimeout(() => {
-          if (!isSubmitting) {
-            return;
-          }
-          isSubmitting = false;
-          setStatus('Не удалось отправить. Попробуй ещё раз.', true);
-          submitBtn.disabled = false;
-        }, 12000);
-      });
-
-      function isAllowedOrigin(origin) {
         try {
-          const url = new URL(origin);
-          return url.hostname === 'script.google.com'
-            || url.hostname === 'script.googleusercontent.com'
-            || url.hostname.endsWith('.script.googleusercontent.com');
+          const data = await sendJsonp({
+            source: 'WEB',
+            callsign: form.callsign ? form.callsign.value.trim() : '',
+            full_name: form.full_name ? form.full_name.value.trim() : '',
+            phone: form.phone ? form.phone.value.trim() : '',
+            faction: form.faction ? form.faction.value.trim() : '',
+            tariff: form.tariff ? form.tariff.value.trim() : '',
+          });
+          handleApiResponse(data);
         } catch (error) {
-          return false;
+          registerPending = false;
+          submitBtn.disabled = false;
+          setStatus('Не удалось отправить. Попробуй ещё раз.', true);
         }
       }
 
-      window.addEventListener('message', (event) => {
-        if (!isAllowedOrigin(event.origin)) {
+      async function submitPaid() {
+        if (!lastId || paidPending) {
           return;
         }
-        const data = event.data;
-        if (!data || typeof data !== 'object') {
-          return;
+        paidPending = true;
+        if (paidBtn) {
+          paidBtn.disabled = true;
         }
-        if (submitTimer) {
-          clearTimeout(submitTimer);
-          submitTimer = null;
-        }
-
-        if (!data.ok) {
-          setStatus(errorMessage(data.error), true);
-          submitBtn.disabled = false;
-          isSubmitting = false;
-          return;
+        if (paidStatus) {
+          paidStatus.textContent = 'Отмечаем оплату...';
         }
 
-        if (data.action === 'register') {
-          lastId = data.id || '';
-          isSubmitting = false;
-          submitBtn.disabled = false;
-          setStatus('Боец зарегистрирован.', false);
-
-          if (fighterQr) {
-            const base = lastSubmission && lastSubmission.callsign
-              ? ('MAD DAY | ' + lastSubmission.callsign + ' | ID: ' + lastId)
-              : ('MAD DAY | ID: ' + lastId);
-            fighterQr.src = buildQrUrl(base);
-          }
-          if (resultBlock) {
-            resultBlock.classList.remove('hidden');
-            resultBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
+        try {
+          const data = await sendJsonp({
+            source: 'WEB',
+            action: 'mark_paid',
+            id: lastId,
+          });
+          handleApiResponse(data);
+        } catch (error) {
+          paidPending = false;
           if (paidBtn) {
             paidBtn.disabled = false;
           }
-          form.reset();
+          if (paidStatus) {
+            paidStatus.textContent = 'Не удалось отметить оплату. Попробуй ещё раз.';
+          }
+        }
+      }
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (submitBtn.disabled || registerPending) {
           return;
         }
+        submitRegistration();
+      });
 
-        if (data.action === 'mark_paid') {
-          if (paidStatus) {
-            paidStatus.textContent = 'Оплата отмечена. Спасибо!';
-          }
+      window.addEventListener('message', (event) => {
+        if (!isResponsePayload(event.data)) {
+          return;
+        }
+        try {
+          handleApiResponse(event.data);
+        } catch (error) {
+          setStatus('Не удалось обработать ответ сервера.', true);
         }
       });
 
-      if (paidBtn && paidForm) {
+      if (paidBtn) {
         paidBtn.addEventListener('click', () => {
           if (!lastId) {
             setStatus('Сначала зарегистрируйся, чтобы получить ID.', true);
             return;
           }
-          if (paidIdInput) {
-            paidIdInput.value = lastId;
-          }
-          if (paidStatus) {
-            paidStatus.textContent = 'Отмечаем оплату...';
-          }
-          paidForm.action = APPS_SCRIPT_URL;
-          paidForm.method = 'POST';
-          paidForm.target = 'submit-frame';
-          paidForm.submit();
+          submitPaid();
         });
       }
 

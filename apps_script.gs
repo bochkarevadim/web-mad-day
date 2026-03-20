@@ -24,17 +24,29 @@ const SHEET_HEADERS = [
   "Дата оплаты",
 ];
 
-function doGet() {
-  return ContentService.createTextOutput("OK");
+function doGet(e) {
+  const data = getRequestData(e);
+  const callback = sanitizeCallback(String(data.callback || ""));
+
+  if (!hasRequestPayload(data)) {
+    return ContentService.createTextOutput("OK");
+  }
+
+  return handleRequest(data, { callback: callback, isWeb: false });
 }
 
 function doPost(e) {
-  Logger.log("POST HIT");
-  const data = e && e.parameter ? e.parameter : {};
-  const source = (data.source || "").trim();
-  const isWeb = source === "WEB";
-  const action = (data.action || "").trim();
-  Logger.log("Source: " + source + ", action: " + action);
+  const data = getRequestData(e);
+  const source = String(data.source || "").trim();
+  return handleRequest(data, { callback: "", isWeb: source === "WEB" });
+}
+
+function handleRequest(data, transport) {
+  Logger.log("REQUEST HIT");
+
+  const source = String(data.source || "").trim();
+  const action = String(data.action || "").trim();
+  Logger.log("Source: " + source + ", action: " + action + ", callback: " + (transport.callback || "-"));
 
   const sheet = getSheet();
   ensureHeaders(sheet);
@@ -45,51 +57,53 @@ function doPost(e) {
     const id = String(data.id || "").trim();
     if (!id) {
       Logger.log("Validation failed: missing_id");
-      return respond({ ok: false, error: "missing_id" }, isWeb);
+      return respond({ ok: false, error: "missing_id" }, transport);
     }
+
     const paidAt = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy HH:mm");
     const updated = markPaid(sheet, id, paidAt);
     if (!updated) {
       Logger.log("Validation failed: id_not_found for " + id);
-      return respond({ ok: false, error: "id_not_found", id: id }, isWeb);
+      return respond({ ok: false, error: "id_not_found", id: id }, transport);
     }
+
     Logger.log("Payment marked for id: " + id);
-    return respond({ ok: true, action: "mark_paid", id: id, paid_at: paidAt }, isWeb);
+    return respond({ ok: true, action: "mark_paid", id: id, paid_at: paidAt }, transport);
   }
 
-  const callsign = (data.callsign || "").trim();
-  const fullName = (data.full_name || "").trim();
-  const phone = (data.phone || "").trim();
-  const faction = (data.faction || "").trim();
-  const tariff = (data.tariff || "").trim();
-  Logger.log("Payload: callsign=" + callsign + ", faction=" + faction + ", tariff=" + tariff);
+  const callsign = String(data.callsign || "").trim();
+  const fullName = String(data.full_name || "").trim();
+  const phone = String(data.phone || "").trim();
+  const faction = String(data.faction || "").trim();
+  const tariff = String(data.tariff || "").trim();
+  Logger.log("Payload: callsign=" + callsign + ", full_name=" + fullName + ", faction=" + faction + ", tariff=" + tariff);
 
   if (!callsign || callsign.length < 2 || callsign.length > 32) {
     Logger.log("Validation failed: invalid_callsign");
-    return respond({ ok: false, error: "invalid_callsign" }, isWeb);
+    return respond({ ok: false, error: "invalid_callsign" }, transport);
   }
   if (!fullName || fullName.length < 2) {
     Logger.log("Validation failed: invalid_full_name");
-    return respond({ ok: false, error: "invalid_full_name" }, isWeb);
+    return respond({ ok: false, error: "invalid_full_name" }, transport);
   }
   if (!phone) {
     Logger.log("Validation failed: invalid_phone");
-    return respond({ ok: false, error: "invalid_phone" }, isWeb);
+    return respond({ ok: false, error: "invalid_phone" }, transport);
   }
   if (!CONFIG.FACTION_LIMITS[faction]) {
     Logger.log("Validation failed: invalid_faction");
-    return respond({ ok: false, error: "invalid_faction" }, isWeb);
+    return respond({ ok: false, error: "invalid_faction" }, transport);
   }
   if (CONFIG.TARIFFS.indexOf(tariff) === -1) {
     Logger.log("Validation failed: invalid_tariff");
-    return respond({ ok: false, error: "invalid_tariff" }, isWeb);
+    return respond({ ok: false, error: "invalid_tariff" }, transport);
   }
 
   const counts = factionCounts(sheet);
   Logger.log("Faction count for " + faction + ": " + (counts[faction] || 0));
   if ((counts[faction] || 0) >= CONFIG.FACTION_LIMITS[faction]) {
     Logger.log("Validation failed: faction_full");
-    return respond({ ok: false, error: "faction_full" }, isWeb);
+    return respond({ ok: false, error: "faction_full" }, transport);
   }
 
   let id = "";
@@ -119,9 +133,23 @@ function doPost(e) {
   }
 
   Logger.log("Registration stored with id: " + id);
-  return respond({ ok: true, action: "register", id: id }, isWeb);
+  return respond({ ok: true, action: "register", id: id }, transport);
 }
 
+function getRequestData(e) {
+  return e && e.parameter ? e.parameter : {};
+}
+
+function hasRequestPayload(data) {
+  const ignoredKeys = {
+    callback: true,
+    _: true,
+    _ts: true,
+  };
+  return Object.keys(data).some(function (key) {
+    return !ignoredKeys[key];
+  });
+}
 
 function getSheet() {
   let spreadsheet;
@@ -141,7 +169,9 @@ function getSheet() {
 
 function ensureHeaders(sheet) {
   const firstRow = sheet.getRange(1, 1, 1, SHEET_HEADERS.length).getValues()[0];
-  const hasHeaders = SHEET_HEADERS.every((value, index) => firstRow[index] === value);
+  const hasHeaders = SHEET_HEADERS.every(function (value, index) {
+    return firstRow[index] === value;
+  });
   if (!hasHeaders) {
     sheet.getRange(1, 1, 1, SHEET_HEADERS.length).setValues([SHEET_HEADERS]);
   }
@@ -150,9 +180,15 @@ function ensureHeaders(sheet) {
 function nextPlayerId(sheet) {
   const values = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 0), 1).getValues();
   const numeric = values
-    .map((row) => String(row[0] || ""))
-    .filter((value) => /^\d+$/.test(value))
-    .map((value) => parseInt(value, 10));
+    .map(function (row) {
+      return String(row[0] || "");
+    })
+    .filter(function (value) {
+      return /^\d+$/.test(value);
+    })
+    .map(function (value) {
+      return parseInt(value, 10);
+    });
   const nextValue = numeric.length ? Math.max.apply(null, numeric) + 1 : 1;
   return ("" + nextValue).padStart(3, "0");
 }
@@ -178,21 +214,40 @@ function getNextWriteRow(sheet) {
 function factionCounts(sheet) {
   const data = sheet.getDataRange().getValues();
   const counts = {};
-  Object.keys(CONFIG.FACTION_LIMITS).forEach((faction) => {
+  Object.keys(CONFIG.FACTION_LIMITS).forEach(function (faction) {
     counts[faction] = 0;
   });
   for (let i = 1; i < data.length; i += 1) {
     const faction = String(data[i][4] || "").trim();
-    if (counts.hasOwnProperty(faction)) {
+    if (Object.prototype.hasOwnProperty.call(counts, faction)) {
       counts[faction] += 1;
     }
   }
   return counts;
 }
 
+function respond(payload, transport) {
+  if (transport.callback) {
+    return jsonpResponse(payload, transport.callback);
+  }
+  return transport.isWeb ? htmlResponse(payload) : jsonResponse(payload);
+}
 
-function respond(payload, isWeb) {
-  return isWeb ? htmlResponse(payload) : jsonResponse(payload);
+function sanitizeCallback(name) {
+  if (!name) {
+    return "";
+  }
+  return /^[A-Za-z_$][0-9A-Za-z_$]*$/.test(name) ? name : "";
+}
+
+function jsonpResponse(payload, callbackName) {
+  const safeCallback = sanitizeCallback(callbackName);
+  if (!safeCallback) {
+    return jsonResponse({ ok: false, error: "invalid_callback" });
+  }
+  const body = safeCallback + "(" + JSON.stringify(payload).replace(/</g, "\u003c") + ");";
+  return ContentService.createTextOutput(body)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
 
 function htmlResponse(payload) {

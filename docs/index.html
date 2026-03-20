@@ -561,6 +561,7 @@
         }
         if (paidStatus) {
           paidStatus.textContent = 'Оплата отмечена. Спасибо!';
+          setStatus('Оплата отмечена.', false);
         }
       }
 
@@ -570,6 +571,7 @@
         }
 
         if (!data.ok) {
+          const message = errorMessage(data.error);
           registerPending = false;
           paidPending = false;
           submitBtn.disabled = false;
@@ -579,9 +581,9 @@
           if (paidBtn && lastId) {
             paidBtn.disabled = false;
           }
-          setStatus(errorMessage(data.error), true);
-          if (paidStatus && data.action === 'mark_paid') {
-            paidStatus.textContent = errorMessage(data.error);
+          setStatus(message, true);
+          if (paidStatus && (data.action === 'mark_paid' || lastId)) {
+            paidStatus.textContent = message;
           }
           return;
         }

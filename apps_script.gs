@@ -57,14 +57,14 @@ function handleRequest(data, transport) {
     const id = String(data.id || "").trim();
     if (!id) {
       Logger.log("Validation failed: missing_id");
-      return respond({ ok: false, error: "missing_id" }, transport);
+      return respond({ ok: false, action: "mark_paid", error: "missing_id" }, transport);
     }
 
     const paidAt = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy HH:mm");
     const updated = markPaid(sheet, id, paidAt);
     if (!updated) {
       Logger.log("Validation failed: id_not_found for " + id);
-      return respond({ ok: false, error: "id_not_found", id: id }, transport);
+      return respond({ ok: false, action: "mark_paid", error: "id_not_found", id: id }, transport);
     }
 
     Logger.log("Payment marked for id: " + id);
@@ -190,7 +190,18 @@ function nextPlayerId(sheet) {
       return parseInt(value, 10);
     });
   const nextValue = numeric.length ? Math.max.apply(null, numeric) + 1 : 1;
-  return ("" + nextValue).padStart(3, "0");
+  return String(nextValue);
+}
+
+function normalizeId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (!/^\d+$/.test(raw)) {
+    return raw;
+  }
+  return String(parseInt(raw, 10));
 }
 
 function getNextWriteRow(sheet) {
@@ -258,9 +269,14 @@ function htmlResponse(payload) {
 }
 
 function markPaid(sheet, id, paidAt) {
+  const targetId = normalizeId(id);
+  if (!targetId) {
+    return false;
+  }
+
   const values = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 0), 1).getValues();
   for (let i = 0; i < values.length; i += 1) {
-    if (String(values[i][0] || "").trim() === String(id)) {
+    if (normalizeId(values[i][0]) === targetId) {
       const row = i + 2;
       sheet.getRange(row, 9).setValue("оплачено");
       sheet.getRange(row, 10).setValue(paidAt);

@@ -68,7 +68,7 @@ function doPost(e) {
     Logger.log("Validation failed: invalid_callsign");
     return respond({ ok: false, error: "invalid_callsign" }, isWeb);
   }
-  if (!fullName || fullName.split(/\s+/).length < 2) {
+  if (!fullName || fullName.length < 2) {
     Logger.log("Validation failed: invalid_full_name");
     return respond({ ok: false, error: "invalid_full_name" }, isWeb);
   }

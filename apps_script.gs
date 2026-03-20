@@ -77,21 +77,29 @@ function doPost(e) {
     return respond({ ok: false, error: "faction_full" }, isWeb);
   }
 
-  const id = nextPlayerId(sheet);
-  const now = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy HH:mm");
+  let id = "";
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    id = nextPlayerId(sheet);
+    const now = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy HH:mm");
+    const row = getNextWriteRow(sheet);
 
-  sheet.appendRow([
-    id,
-    callsign,
-    fullName,
-    phone,
-    faction,
-    tariff,
-    "WEB",
-    now,
-    "не оплачено",
-    "",
-  ]);
+    sheet.getRange(row, 1, 1, 10).setValues([[
+      id,
+      callsign,
+      fullName,
+      phone,
+      faction,
+      tariff,
+      "WEB",
+      now,
+      "не оплачено",
+      "",
+    ]]);
+  } finally {
+    lock.releaseLock();
+  }
 
   return respond({ ok: true, action: "register", id: id }, isWeb);
 }
@@ -129,6 +137,24 @@ function nextPlayerId(sheet) {
     .map((value) => parseInt(value, 10));
   const nextValue = numeric.length ? Math.max.apply(null, numeric) + 1 : 1;
   return ("" + nextValue).padStart(3, "0");
+}
+
+function getNextWriteRow(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 1) {
+    return 1;
+  }
+  if (lastRow === 1) {
+    return 2;
+  }
+  const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  let lastFilled = 1;
+  for (let i = 0; i < values.length; i += 1) {
+    if (String(values[i][0] || "").trim() !== "") {
+      lastFilled = i + 2;
+    }
+  }
+  return lastFilled + 1;
 }
 
 function factionCounts(sheet) {

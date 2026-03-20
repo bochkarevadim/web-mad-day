@@ -514,6 +514,20 @@
         statusEl.style.color = isError ? '#ffb3b3' : '#bdbdbd';
       }
 
+      function errorMessage(errorCode) {
+        const map = {
+          invalid_callsign: 'Проверь позывной.',
+          invalid_full_name: 'Укажи фамилию и имя.',
+          invalid_phone: 'Укажи телефон.',
+          invalid_faction: 'Выбери фракцию.',
+          invalid_tariff: 'Выбери тариф.',
+          faction_full: 'Во фракции больше нет мест.',
+          missing_id: 'Не найден ID регистрации.',
+          id_not_found: 'Регистрация для оплаты не найдена.',
+        };
+        return map[errorCode] || 'Ошибка отправки. Проверь данные и попробуй ещё раз.';
+      }
+
       function buildQrUrl(text) {
         return 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(text);
       }
@@ -605,7 +619,7 @@
         }
 
         if (!data.ok) {
-          setStatus('Ошибка отправки. Проверь данные и попробуй ещё раз.', true);
+          setStatus(errorMessage(data.error), true);
           submitBtn.disabled = false;
           isSubmitting = false;
           return;

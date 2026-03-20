@@ -29,24 +29,31 @@ function doGet() {
 }
 
 function doPost(e) {
+  Logger.log("POST HIT");
   const data = e && e.parameter ? e.parameter : {};
   const source = (data.source || "").trim();
   const isWeb = source === "WEB";
   const action = (data.action || "").trim();
+  Logger.log("Source: " + source + ", action: " + action);
 
   const sheet = getSheet();
   ensureHeaders(sheet);
+  Logger.log("Sheet name: " + sheet.getName());
+  Logger.log("Last row before: " + sheet.getLastRow());
 
   if (action === "mark_paid") {
     const id = String(data.id || "").trim();
     if (!id) {
+      Logger.log("Validation failed: missing_id");
       return respond({ ok: false, error: "missing_id" }, isWeb);
     }
     const paidAt = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy HH:mm");
     const updated = markPaid(sheet, id, paidAt);
     if (!updated) {
+      Logger.log("Validation failed: id_not_found for " + id);
       return respond({ ok: false, error: "id_not_found", id: id }, isWeb);
     }
+    Logger.log("Payment marked for id: " + id);
     return respond({ ok: true, action: "mark_paid", id: id, paid_at: paidAt }, isWeb);
   }
 
@@ -55,25 +62,33 @@ function doPost(e) {
   const phone = (data.phone || "").trim();
   const faction = (data.faction || "").trim();
   const tariff = (data.tariff || "").trim();
+  Logger.log("Payload: callsign=" + callsign + ", faction=" + faction + ", tariff=" + tariff);
 
   if (!callsign || callsign.length < 2 || callsign.length > 32) {
+    Logger.log("Validation failed: invalid_callsign");
     return respond({ ok: false, error: "invalid_callsign" }, isWeb);
   }
   if (!fullName || fullName.split(/\s+/).length < 2) {
+    Logger.log("Validation failed: invalid_full_name");
     return respond({ ok: false, error: "invalid_full_name" }, isWeb);
   }
   if (!phone) {
+    Logger.log("Validation failed: invalid_phone");
     return respond({ ok: false, error: "invalid_phone" }, isWeb);
   }
   if (!CONFIG.FACTION_LIMITS[faction]) {
+    Logger.log("Validation failed: invalid_faction");
     return respond({ ok: false, error: "invalid_faction" }, isWeb);
   }
   if (CONFIG.TARIFFS.indexOf(tariff) === -1) {
+    Logger.log("Validation failed: invalid_tariff");
     return respond({ ok: false, error: "invalid_tariff" }, isWeb);
   }
 
   const counts = factionCounts(sheet);
+  Logger.log("Faction count for " + faction + ": " + (counts[faction] || 0));
   if ((counts[faction] || 0) >= CONFIG.FACTION_LIMITS[faction]) {
+    Logger.log("Validation failed: faction_full");
     return respond({ ok: false, error: "faction_full" }, isWeb);
   }
 
@@ -84,6 +99,7 @@ function doPost(e) {
     id = nextPlayerId(sheet);
     const now = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy HH:mm");
     const row = getNextWriteRow(sheet);
+    Logger.log("Write row: " + row);
 
     sheet.getRange(row, 1, 1, 10).setValues([[
       id,
@@ -97,10 +113,12 @@ function doPost(e) {
       "не оплачено",
       "",
     ]]);
+    Logger.log("Last row after: " + sheet.getLastRow());
   } finally {
     lock.releaseLock();
   }
 
+  Logger.log("Registration stored with id: " + id);
   return respond({ ok: true, action: "register", id: id }, isWeb);
 }
 

@@ -601,8 +601,14 @@
       });
 
       function isAllowedOrigin(origin) {
-        return origin.indexOf('https://script.google.com') === 0
-          || origin.indexOf('https://script.googleusercontent.com') === 0;
+        try {
+          const url = new URL(origin);
+          return url.hostname === 'script.google.com'
+            || url.hostname === 'script.googleusercontent.com'
+            || url.hostname.endsWith('.script.googleusercontent.com');
+        } catch (error) {
+          return false;
+        }
       }
 
       window.addEventListener('message', (event) => {

@@ -198,8 +198,8 @@ function respond(payload, isWeb) {
 function htmlResponse(payload) {
   const safeJson = JSON.stringify(payload).replace(/</g, "\u003c");
   const html = '<!doctype html><html><body><script>window.parent.postMessage(' + safeJson + ', "*");</script></body></html>';
-  return ContentService.createTextOutput(html)
-    .setMimeType(ContentService.MimeType.HTML);
+  return HtmlService.createHtmlOutput(html)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function markPaid(sheet, id, paidAt) {
